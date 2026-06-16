@@ -1,0 +1,14 @@
+name = "cloudflare-clipboard"
+main = "src/index.js"
+compatibility_date = "2026-06-16"
+
+[observability]
+enabled = true
+
+[vars]
+ACCESSDOCK_BASE_URL = "https://auth.leiyun.blog"
+
+[[d1_databases]]
+binding = "CLIPBOARD_DB"
+database_name = "clipboard"
+database_id = "replace-with-your-d1-database-id"

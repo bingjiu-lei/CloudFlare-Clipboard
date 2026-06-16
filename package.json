@@ -1,0 +1,15 @@
+{
+  "name": "cloudflare-clipboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply clipboard --local",
+    "db:migrate": "wrangler d1 migrations apply clipboard --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^4.20.0"
+  }
+}
