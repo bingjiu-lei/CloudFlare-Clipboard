@@ -18,8 +18,25 @@ It uses AccessDock as the access-control service. The clipboard Worker calls Acc
 src/index.js               Worker app, page rendering, and clipboard APIs
 src/accessdock-client.js   AccessDock check helper
 migrations/0001_init.sql   D1 schema
-wrangler.toml              Worker and binding template
+wrangler.toml              Local template config
+scripts/render-wrangler.mjs  Generates deploy config from build variables
 ```
+
+## Cloudflare Git Deploy
+
+Use a private GitHub repository named:
+
+```text
+CloudFlare-Clipboard
+```
+
+Use this deploy command in Cloudflare Workers Git deploy:
+
+```text
+npm run deploy
+```
+
+This project keeps `wrangler.toml` as a template. During deployment, `scripts/render-wrangler.mjs` creates an ignored `wrangler.generated.toml` file from Cloudflare build variables. Do not commit the real D1 database id.
 
 ## Cloudflare Setup
 
@@ -29,16 +46,18 @@ Create a D1 database:
 wrangler d1 create clipboard
 ```
 
-Copy the returned database id into `wrangler.toml`:
+Add these build environment variables in Cloudflare:
 
-```toml
-[[d1_databases]]
-binding = "CLIPBOARD_DB"
-database_name = "clipboard"
-database_id = "your-d1-database-id"
+```text
+D1_DATABASE_ID=your-real-d1-database-id
+D1_DATABASE_NAME=clipboard
+WORKER_NAME=cloudflare-clipboard
+ACCESSDOCK_BASE_URL=https://auth.leiyun.blog
 ```
 
-Set runtime variables:
+Only `D1_DATABASE_ID` is required. The other values have defaults.
+
+Set these runtime variables and secrets in Cloudflare Workers:
 
 ```text
 ACCESSDOCK_BASE_URL=https://auth.leiyun.blog
@@ -56,6 +75,8 @@ Apply the migration:
 ```powershell
 npm run db:migrate
 ```
+
+When running migrations from Cloudflare Git deploy, make sure `D1_DATABASE_ID` exists as a build environment variable.
 
 For local development:
 

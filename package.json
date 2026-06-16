@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "db:migrate:local": "wrangler d1 migrations apply clipboard --local",
-    "db:migrate": "wrangler d1 migrations apply clipboard --remote"
+    "deploy": "node scripts/render-wrangler.mjs && wrangler deploy --keep-vars --config wrangler.generated.toml",
+    "db:migrate:local": "wrangler d1 migrations apply CLIPBOARD_DB --local",
+    "db:migrate": "node scripts/render-wrangler.mjs && wrangler d1 migrations apply CLIPBOARD_DB --remote --config wrangler.generated.toml"
   },
   "devDependencies": {
     "wrangler": "^4.20.0"
