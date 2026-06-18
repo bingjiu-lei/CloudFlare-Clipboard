@@ -12,6 +12,15 @@ const workerName = process.env.WORKER_NAME || "cloudflare-clipboard";
 const databaseName = process.env.D1_DATABASE_NAME || "clipboard";
 const databaseId = process.env.D1_DATABASE_ID;
 const accessDockBaseUrl = process.env.ACCESSDOCK_BASE_URL || "https://auth.leiyun.blog";
+const accessDockService = String(process.env.ACCESSDOCK_SERVICE || "").trim();
+
+const serviceBinding = accessDockService
+  ? `
+[[services]]
+binding = "ACCESSDOCK"
+service = "${escapeToml(accessDockService)}"
+`
+  : "";
 
 const config = `name = "${escapeToml(workerName)}"
 main = "src/index.js"
@@ -27,6 +36,7 @@ ACCESSDOCK_BASE_URL = "${escapeToml(accessDockBaseUrl)}"
 binding = "CLIPBOARD_DB"
 database_name = "${escapeToml(databaseName)}"
 database_id = "${escapeToml(databaseId)}"
+${serviceBinding}
 `;
 
 writeFileSync("wrangler.generated.toml", config);

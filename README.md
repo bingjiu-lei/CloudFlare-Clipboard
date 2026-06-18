@@ -53,9 +53,13 @@ D1_DATABASE_ID=your-real-d1-database-id
 D1_DATABASE_NAME=clipboard
 WORKER_NAME=cloudflare-clipboard
 ACCESSDOCK_BASE_URL=https://auth.leiyun.blog
+ACCESSDOCK_SERVICE=cloudflare-accessdock
 ```
 
-Only `D1_DATABASE_ID` is required. The other values have defaults.
+Only `D1_DATABASE_ID` is required. `ACCESSDOCK_SERVICE` is optional. When it
+is set, the generated Wrangler configuration includes an `ACCESSDOCK` Service
+Binding. When omitted, the Worker calls `ACCESSDOCK_BASE_URL` over public
+HTTPS.
 
 Set these runtime variables and secrets in Cloudflare Workers:
 
@@ -69,6 +73,20 @@ Optional:
 ```text
 ACTION_TOKEN_SECONDS=1800
 ```
+
+`ACTION_TOKEN_SECRET` is required for rendering an authorized clipboard page
+and should be stored as a Cloudflare secret.
+
+The AccessDock client supports both connection modes:
+
+```text
+ACCESSDOCK binding exists -> internal Service Binding call
+No ACCESSDOCK binding     -> public fetch to ACCESSDOCK_BASE_URL
+```
+
+If AccessDock is exposed through a Worker Route in the same zone, configure
+`ACCESSDOCK_SERVICE`. Public fallback is primarily intended for a Custom
+Domain, another account, or another external AccessDock deployment.
 
 Apply the migration:
 
