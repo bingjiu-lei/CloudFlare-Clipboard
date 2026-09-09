@@ -538,7 +538,6 @@ textarea::placeholder {
   background: var(--accent);
   color: #ffffff;
   border-color: transparent;
-  padding-right: 9px;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
@@ -546,19 +545,6 @@ textarea::placeholder {
 }
 .btn-primary:active:not(:disabled) {
   background: var(--accent-active);
-}
-
-.kbd-hint {
-  font-size: 11px;
-  font-weight: 500;
-  font-family: ui-monospace, monospace;
-  background: var(--kbd-bg);
-  border: 1px solid var(--kbd-border);
-  color: var(--kbd-text);
-  border-radius: 4px;
-  padding: 1px 5px;
-  line-height: 1.2;
-  letter-spacing: 0.02em;
 }
 
 .spinner {
@@ -624,9 +610,8 @@ textarea::placeholder {
   .meta { justify-content: flex-start; width: 100%; }
   .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
   .status-group { justify-content: space-between; }
-  .actions { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
   .btn { justify-content: center; padding: 0 8px; }
-  .kbd-hint { display: none; }
   textarea { min-height: calc(100vh - 240px); padding: 16px; }
 }
 </style>
@@ -662,7 +647,7 @@ textarea::placeholder {
 
     <section class="workspace">
       <div class="textarea-wrapper">
-        <textarea id="clipboard" spellcheck="false" placeholder="在此输入或粘贴文本... 支持 Ctrl+S 快速保存，Tab 缩进">${escapeHtml(content)}</textarea>
+        <textarea id="clipboard" spellcheck="false" placeholder="在此输入或粘贴文本...">${escapeHtml(content)}</textarea>
       </div>
       <div class="toolbar">
         <div class="status-group">
@@ -686,7 +671,6 @@ textarea::placeholder {
             <svg class="btn-icon" id="saveIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             <svg class="btn-icon spinner" id="saveSpinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
             <span class="btn-label">保存</span>
-            <kbd class="kbd-hint">Ctrl+S</kbd>
           </button>
         </div>
       </div>
@@ -715,11 +699,6 @@ const toastContainer = document.getElementById("toastContainer");
 let lastSavedContent = textarea.value;
 let isDirty = false;
 let clearTimer = null;
-
-// Platform detection for shortcut hint
-const isMac = /mac/i.test(navigator.userAgent || "");
-const kbdHint = document.querySelector(".kbd-hint");
-if (kbdHint) kbdHint.textContent = isMac ? "⌘S" : "Ctrl+S";
 
 // Theme handling
 const THEME_KEY = "cf_clipboard_theme";
