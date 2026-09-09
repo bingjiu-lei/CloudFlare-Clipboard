@@ -1,6 +1,8 @@
 import { checkAccess } from "./accessdock-client.js";
 
 const CLIPBOARD_ID = "main";
+const TABS_META_ID = "_tabs_meta";
+const DEFAULT_TABS = [{ id: "main", title: "默认便签" }];
 const DEFAULT_ACTION_TOKEN_SECONDS = 30 * 60;
 const MAX_CONTENT_LENGTH = 1024 * 1024;
 
@@ -12,12 +14,20 @@ export default {
       return handleHome(request, env);
     }
 
+    if (request.method === "GET" && url.pathname === "/api/tab") {
+      return handleGetTab(request, env);
+    }
+
     if (request.method === "POST" && url.pathname === "/api/save") {
       return handleSave(request, env);
     }
 
     if (request.method === "POST" && url.pathname === "/api/clear") {
       return handleClear(request, env);
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/tabs") {
+      return handleTabsAction(request, env);
     }
 
     return new Response("Not Found", { status: 404 });
@@ -28,19 +38,39 @@ async function handleHome(request, env) {
   const access = await checkAccess(request, env);
   if (!access.ok) return access.response;
 
-  const item = await getClipboard(env);
+  const tabs = await getTabsMeta(env);
+  const activeTabId = tabs[0]?.id || CLIPBOARD_ID;
+  const item = await getClipboard(env, activeTabId);
   const actionToken = await createActionToken(env, {
     purpose: "clipboard:write",
     role: access.result?.role || "public",
   });
 
   return html(renderPage({
+    tabs,
+    activeTabId,
     content: item.content,
     updatedAt: item.updated_at,
     actionToken,
     authRole: access.result?.role || "public",
     actionTokenSeconds: getActionTokenSeconds(env),
   }));
+}
+
+async function handleGetTab(request, env) {
+  const access = await checkAccess(request, env, { resourcePath: "/" });
+  if (!access.ok) return access.response;
+
+  const url = new URL(request.url);
+  const id = url.searchParams.get("id") || CLIPBOARD_ID;
+  const item = await getClipboard(env, id);
+  return json({
+    ok: true,
+    id,
+    content: item.content,
+    updatedAt: item.updated_at,
+    updatedText: item.updated_at ? formatTime(item.updated_at) : "尚未保存",
+  });
 }
 
 async function handleSave(request, env) {
@@ -54,23 +84,76 @@ async function handleSave(request, env) {
     return json({ ok: false, message: "Invalid JSON body." }, 400);
   }
 
+  const id = String(payload?.id || CLIPBOARD_ID).trim() || CLIPBOARD_ID;
   const content = String(payload?.content ?? "");
   if (content.length > MAX_CONTENT_LENGTH) {
     return json({ ok: false, message: "Content is too large." }, 413);
   }
 
   const updatedAt = unix();
-  await saveClipboard(env, content, updatedAt);
-  return json({ ok: true, updatedAt, updatedText: formatTime(updatedAt), auth: auth.source });
+  await saveClipboard(env, content, updatedAt, id);
+  return json({ ok: true, id, updatedAt, updatedText: formatTime(updatedAt), auth: auth.source });
 }
 
 async function handleClear(request, env) {
   const auth = await authorizeWrite(request, env);
   if (!auth.ok) return json({ ok: false, message: auth.message }, auth.status);
 
+  let payload = {};
+  try {
+    payload = await request.json();
+  } catch {}
+
+  const id = String(payload?.id || CLIPBOARD_ID).trim() || CLIPBOARD_ID;
   const updatedAt = unix();
-  await saveClipboard(env, "", updatedAt);
-  return json({ ok: true, updatedAt, updatedText: formatTime(updatedAt), auth: auth.source });
+  await saveClipboard(env, "", updatedAt, id);
+  return json({ ok: true, id, updatedAt, updatedText: formatTime(updatedAt), auth: auth.source });
+}
+
+async function handleTabsAction(request, env) {
+  const auth = await authorizeWrite(request, env);
+  if (!auth.ok) return json({ ok: false, message: auth.message }, auth.status);
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ ok: false, message: "Invalid JSON body." }, 400);
+  }
+
+  const action = payload?.action;
+  let tabs = await getTabsMeta(env);
+
+  if (action === "create") {
+    const title = String(payload?.title || `便签 ${tabs.length + 1}`).trim().slice(0, 30) || `便签 ${tabs.length + 1}`;
+    const newId = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    tabs.push({ id: newId, title });
+    await saveTabsMeta(env, tabs);
+    return json({ ok: true, tab: { id: newId, title }, tabs });
+  }
+
+  if (action === "rename") {
+    const id = String(payload?.id || "");
+    const title = String(payload?.title || "").trim().slice(0, 30);
+    if (!id || !title) return json({ ok: false, message: "Invalid id or title" }, 400);
+    tabs = tabs.map(t => (t.id === id ? { ...t, title } : t));
+    await saveTabsMeta(env, tabs);
+    return json({ ok: true, tabs });
+  }
+
+  if (action === "delete") {
+    const id = String(payload?.id || "");
+    if (!id || id === CLIPBOARD_ID) {
+      return json({ ok: false, message: "无法删除默认主便签" }, 400);
+    }
+    tabs = tabs.filter(t => t.id !== id);
+    if (tabs.length === 0) tabs = DEFAULT_TABS;
+    await saveTabsMeta(env, tabs);
+    await deleteClipboard(env, id);
+    return json({ ok: true, tabs });
+  }
+
+  return json({ ok: false, message: "Unknown action" }, 400);
 }
 
 async function authorizeWrite(request, env) {
@@ -88,10 +171,33 @@ async function authorizeWrite(request, env) {
   return { ok: false, status: 401, message: "Authorization expired. Refresh the page and verify again." };
 }
 
-async function getClipboard(env) {
+async function getTabsMeta(env) {
+  try {
+    const row = await env.CLIPBOARD_DB.prepare(
+      "SELECT content FROM clipboard_items WHERE id = ?",
+    ).bind(TABS_META_ID).first();
+
+    if (!row?.content) return DEFAULT_TABS;
+    const parsed = JSON.parse(row.content);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed;
+    }
+  } catch {}
+  return DEFAULT_TABS;
+}
+
+async function saveTabsMeta(env, tabs) {
+  const content = JSON.stringify(tabs);
+  const updatedAt = unix();
+  await env.CLIPBOARD_DB.prepare(
+    "INSERT INTO clipboard_items(id, content, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at",
+  ).bind(TABS_META_ID, content, updatedAt).run();
+}
+
+async function getClipboard(env, id = CLIPBOARD_ID) {
   const row = await env.CLIPBOARD_DB.prepare(
     "SELECT content, updated_at FROM clipboard_items WHERE id = ?",
-  ).bind(CLIPBOARD_ID).first();
+  ).bind(id).first();
 
   return {
     content: row?.content || "",
@@ -99,10 +205,16 @@ async function getClipboard(env) {
   };
 }
 
-async function saveClipboard(env, content, updatedAt) {
+async function saveClipboard(env, content, updatedAt, id = CLIPBOARD_ID) {
   await env.CLIPBOARD_DB.prepare(
     "INSERT INTO clipboard_items(id, content, updated_at) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at",
-  ).bind(CLIPBOARD_ID, content, updatedAt).run();
+  ).bind(id, content, updatedAt).run();
+}
+
+async function deleteClipboard(env, id) {
+  await env.CLIPBOARD_DB.prepare(
+    "DELETE FROM clipboard_items WHERE id = ?",
+  ).bind(id).run();
 }
 
 async function createActionToken(env, payload) {
@@ -148,7 +260,7 @@ function getActionTokenSeconds(env) {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_ACTION_TOKEN_SECONDS;
 }
 
-function renderPage({ content, updatedAt, actionToken, authRole, actionTokenSeconds }) {
+function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, authRole, actionTokenSeconds }) {
   const updatedText = updatedAt ? formatTime(updatedAt) : "尚未保存";
   return `<!doctype html>
 <html lang="zh-CN">
@@ -349,6 +461,147 @@ body {
   transition: background-color 0.25s ease, box-shadow 0.25s ease;
 }
 
+/* Tabs System */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px 0 12px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tabs-scroll {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  padding-bottom: 0;
+}
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-item {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tab-item:hover {
+  color: var(--ink);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] .tab-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-item.active {
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
+  border-color: var(--line);
+  position: relative;
+  margin-bottom: -1px;
+  padding-bottom: 1px;
+  z-index: 1;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.02);
+}
+
+.tab-dirty-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.tab-title {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-title-input {
+  max-width: 130px;
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--subtle);
+  font-size: 14px;
+  line-height: 1;
+  transition: all 0.12s ease;
+  margin-left: 2px;
+}
+
+.tab-close:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.add-tab-btn {
+  height: 27px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 3px;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.add-tab-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
 .textarea-wrapper {
   flex: 1;
   position: relative;
@@ -358,7 +611,7 @@ body {
 textarea {
   flex: 1;
   width: 100%;
-  min-height: calc(100vh - 210px);
+  min-height: calc(100vh - 240px);
   resize: vertical;
   border: 0;
   outline: 0;
@@ -608,11 +861,13 @@ textarea::placeholder {
   .shell { width: calc(100% - 20px); padding: 14px 0 20px 0; }
   .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
   .meta { justify-content: flex-start; width: 100%; }
+  .tab-bar { padding: 6px 8px 0 8px; }
+  .tab-title { max-width: 90px; }
   .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
   .status-group { justify-content: space-between; }
   .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
   .btn { justify-content: center; padding: 0 8px; }
-  textarea { min-height: calc(100vh - 240px); padding: 16px; }
+  textarea { min-height: calc(100vh - 270px); padding: 16px; }
 }
 </style>
 </head>
@@ -646,6 +901,13 @@ textarea::placeholder {
     </header>
 
     <section class="workspace">
+      <div class="tab-bar">
+        <div class="tabs-scroll" id="tabsScroll"></div>
+        <button id="addTabBtn" class="add-tab-btn" type="button" title="新建便签">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>新建</span>
+        </button>
+      </div>
       <div class="textarea-wrapper">
         <textarea id="clipboard" spellcheck="false" placeholder="在此输入或粘贴文本...">${escapeHtml(content)}</textarea>
       </div>
@@ -659,7 +921,7 @@ textarea::placeholder {
           <div id="textStats" class="text-stats">0 字符 · 0 词 · 1 行</div>
         </div>
         <div class="actions">
-          <button id="copyButton" class="btn btn-secondary" type="button" title="复制全部内容">
+          <button id="copyButton" class="btn btn-secondary" type="button" title="复制当前便签全部内容">
             <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             <span class="btn-label">复制</span>
           </button>
@@ -681,6 +943,9 @@ textarea::placeholder {
 <script>
 const actionToken = ${JSON.stringify(actionToken)};
 const actionTokenSeconds = ${actionTokenSeconds};
+let tabs = ${JSON.stringify(tabs)};
+let currentTabId = ${JSON.stringify(activeTabId)};
+
 const textarea = document.getElementById("clipboard");
 const statusIndicator = document.getElementById("statusIndicator");
 const statusText = document.getElementById("statusText");
@@ -695,10 +960,21 @@ const clearButton = document.getElementById("clearButton");
 const copyButton = document.getElementById("copyButton");
 const themeToggle = document.getElementById("themeToggle");
 const toastContainer = document.getElementById("toastContainer");
+const tabsScroll = document.getElementById("tabsScroll");
+const addTabBtn = document.getElementById("addTabBtn");
 
 let lastSavedContent = textarea.value;
 let isDirty = false;
 let clearTimer = null;
+
+// In-memory cache for all opened tabs
+const tabsCache = {};
+tabsCache[currentTabId] = {
+  content: textarea.value,
+  lastSavedContent: textarea.value,
+  updatedText: updatedAtEl.textContent,
+  isDirty: false,
+};
 
 // Theme handling
 const THEME_KEY = "cf_clipboard_theme";
@@ -737,6 +1013,200 @@ function setStatus(text, type = "ready") {
   statusIndicator.className = "status-indicator " + type;
 }
 
+// Render tabs UI
+function renderTabs() {
+  tabsScroll.innerHTML = "";
+  tabs.forEach(tab => {
+    const tabEl = document.createElement("div");
+    tabEl.className = "tab-item" + (tab.id === currentTabId ? " active" : "");
+    tabEl.dataset.id = tab.id;
+    tabEl.title = tab.title + " (双击可重命名)";
+
+    const cached = tabsCache[tab.id];
+    const isTabDirty = cached ? cached.isDirty : false;
+    if (isTabDirty) {
+      const dot = document.createElement("span");
+      dot.className = "tab-dirty-dot";
+      dot.title = "有未保存修改";
+      tabEl.appendChild(dot);
+    }
+
+    const titleSpan = document.createElement("span");
+    titleSpan.className = "tab-title";
+    titleSpan.textContent = tab.title;
+    tabEl.appendChild(titleSpan);
+
+    tabEl.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      startRenameTab(tab.id, titleSpan);
+    });
+
+    if (tab.id !== "main" || tabs.length > 1) {
+      const closeBtn = document.createElement("span");
+      closeBtn.className = "tab-close";
+      closeBtn.innerHTML = "&times;";
+      closeBtn.title = "删除便签";
+      closeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteTab(tab.id, tab.title);
+      });
+      tabEl.appendChild(closeBtn);
+    }
+
+    tabEl.addEventListener("click", () => {
+      if (tab.id !== currentTabId) {
+        switchTab(tab.id);
+      }
+    });
+
+    tabsScroll.appendChild(tabEl);
+  });
+}
+renderTabs();
+
+// Switch tab smoothly
+async function switchTab(targetId) {
+  if (targetId === currentTabId) return;
+
+  if (tabsCache[currentTabId]) {
+    tabsCache[currentTabId].content = textarea.value;
+    tabsCache[currentTabId].isDirty = (textarea.value !== tabsCache[currentTabId].lastSavedContent);
+  }
+
+  currentTabId = targetId;
+
+  if (tabsCache[targetId]) {
+    const cached = tabsCache[targetId];
+    textarea.value = cached.content;
+    lastSavedContent = cached.lastSavedContent;
+    updatedAtEl.textContent = cached.updatedText;
+    updateStatsAndDirty();
+    renderTabs();
+    return;
+  }
+
+  setStatus("加载中...", "saving");
+  try {
+    const res = await fetch("/api/tab?id=" + encodeURIComponent(targetId));
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || "加载失败");
+
+    textarea.value = data.content || "";
+    lastSavedContent = data.content || "";
+    updatedAtEl.textContent = data.updatedText || "尚未保存";
+
+    tabsCache[targetId] = {
+      content: data.content || "",
+      lastSavedContent: data.content || "",
+      updatedText: data.updatedText || "尚未保存",
+      isDirty: false,
+    };
+
+    updateStatsAndDirty();
+    renderTabs();
+  } catch (err) {
+    showToast("切换失败: " + err.message, "error");
+  }
+}
+
+// Rename tab inline
+function startRenameTab(tabId, titleSpan) {
+  const currentTitle = titleSpan.textContent;
+  const input = document.createElement("input");
+  input.className = "tab-title-input";
+  input.value = currentTitle;
+  titleSpan.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let finished = false;
+  async function finishRename() {
+    if (finished) return;
+    finished = true;
+    const newTitle = input.value.trim() || currentTitle;
+    if (newTitle !== currentTitle) {
+      tabs = tabs.map(t => (t.id === tabId ? { ...t, title: newTitle } : t));
+      renderTabs();
+      try {
+        await postJson("/api/tabs", { action: "rename", id: tabId, title: newTitle });
+        showToast("便签已重命名", "success");
+      } catch (err) {
+        showToast("重命名同步失败: " + err.message, "error");
+      }
+    } else {
+      renderTabs();
+    }
+  }
+
+  input.addEventListener("blur", finishRename);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      input.blur();
+    } else if (e.key === "Escape") {
+      input.value = currentTitle;
+      input.blur();
+    }
+  });
+}
+
+// Add tab
+addTabBtn.addEventListener("click", async () => {
+  addTabBtn.disabled = true;
+  try {
+    const defaultName = "便签 " + (tabs.length + 1);
+    const result = await postJson("/api/tabs", { action: "create", title: defaultName });
+    tabs = result.tabs;
+    const newTab = result.tab;
+
+    if (tabsCache[currentTabId]) {
+      tabsCache[currentTabId].content = textarea.value;
+      tabsCache[currentTabId].isDirty = (textarea.value !== tabsCache[currentTabId].lastSavedContent);
+    }
+
+    tabsCache[newTab.id] = {
+      content: "",
+      lastSavedContent: "",
+      updatedText: "尚未保存",
+      isDirty: false,
+    };
+
+    currentTabId = newTab.id;
+    textarea.value = "";
+    lastSavedContent = "";
+    updatedAtEl.textContent = "尚未保存";
+
+    updateStatsAndDirty();
+    renderTabs();
+    textarea.focus();
+    showToast("已创建「" + newTab.title + "」", "success");
+  } catch (err) {
+    showToast("新建便签失败: " + err.message, "error");
+  } finally {
+    addTabBtn.disabled = false;
+  }
+});
+
+// Delete tab
+async function deleteTab(tabId, title) {
+  if (!confirm("确认删除便签「" + title + "」？删除后内容将无法恢复。")) return;
+
+  try {
+    const result = await postJson("/api/tabs", { action: "delete", id: tabId });
+    delete tabsCache[tabId];
+    tabs = result.tabs;
+
+    if (currentTabId === tabId) {
+      const nextTab = tabs[0];
+      await switchTab(nextTab.id);
+    } else {
+      renderTabs();
+    }
+    showToast("已删除便签", "info");
+  } catch (err) {
+    showToast("删除便签失败: " + err.message, "error");
+  }
+}
+
 // Live stats & dirty check
 function updateStatsAndDirty() {
   const val = textarea.value;
@@ -745,11 +1215,22 @@ function updateStatsAndDirty() {
   const lines = val ? val.split("\\n").length : 1;
   textStats.textContent = chars + " 字符 · " + words + " 词 · " + lines + " 行";
 
+  const prevDirty = tabsCache[currentTabId] ? tabsCache[currentTabId].isDirty : false;
   isDirty = (val !== lastSavedContent);
+
+  if (tabsCache[currentTabId]) {
+    tabsCache[currentTabId].content = val;
+    tabsCache[currentTabId].isDirty = isDirty;
+  }
+
   if (isDirty) {
     setStatus("未保存更改", "dirty");
   } else {
     setStatus("已保存", "ready");
+  }
+
+  if (prevDirty !== isDirty) {
+    renderTabs();
   }
 }
 updateStatsAndDirty();
@@ -768,9 +1249,10 @@ textarea.addEventListener("keydown", (e) => {
   }
 });
 
-// Window beforeunload check
+// Window beforeunload check across all tabs
 window.addEventListener("beforeunload", (e) => {
-  if (isDirty) {
+  const hasDirty = Object.values(tabsCache).some(t => t.isDirty) || isDirty;
+  if (hasDirty) {
     e.preventDefault();
     e.returnValue = "";
   }
@@ -803,10 +1285,19 @@ async function handleSaveAction() {
   setBusy(true);
   setStatus("正在保存...", "saving");
   try {
-    const result = await postJson("/api/save", { content: textarea.value });
+    const result = await postJson("/api/save", { id: currentTabId, content: textarea.value });
     updatedAtEl.textContent = result.updatedText;
     lastSavedContent = textarea.value;
+
+    if (tabsCache[currentTabId]) {
+      tabsCache[currentTabId].content = textarea.value;
+      tabsCache[currentTabId].lastSavedContent = textarea.value;
+      tabsCache[currentTabId].updatedText = result.updatedText;
+      tabsCache[currentTabId].isDirty = false;
+    }
+
     updateStatsAndDirty();
+    renderTabs();
     setStatus("已保存", "ready");
     showToast("保存成功", "success");
   } catch (error) {
@@ -844,7 +1335,7 @@ copyButton.addEventListener("click", async () => {
   }
 });
 
-// Safe Clear action (two-stage click)
+// Safe Clear action (Mode B: local textarea clear, persist on save)
 function resetClearButton() {
   clearButton.classList.remove("btn-danger-confirm");
   clearButton.querySelector(".btn-label").textContent = "清空";
@@ -866,7 +1357,12 @@ clearButton.addEventListener("click", () => {
   resetClearButton();
 
   textarea.value = "";
+  if (tabsCache[currentTabId]) {
+    tabsCache[currentTabId].content = "";
+    tabsCache[currentTabId].isDirty = ("" !== tabsCache[currentTabId].lastSavedContent);
+  }
   updateStatsAndDirty();
+  renderTabs();
   textarea.focus();
   showToast("输入框已清空，按保存或 Ctrl+S 写入云端", "info");
 });
