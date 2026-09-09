@@ -851,9 +851,9 @@ function resetClearButton() {
   clearTimer = null;
 }
 
-clearButton.addEventListener("click", async () => {
-  if (!textarea.value && !isDirty) {
-    showToast("剪贴板已是空的", "info");
+clearButton.addEventListener("click", () => {
+  if (!textarea.value) {
+    showToast("当前输入框已是空的", "info");
     return;
   }
   if (!clearTimer) {
@@ -865,22 +865,10 @@ clearButton.addEventListener("click", async () => {
   clearTimeout(clearTimer);
   resetClearButton();
 
-  setBusy(true);
-  setStatus("正在清空...", "saving");
-  try {
-    const result = await postJson("/api/clear", {});
-    textarea.value = "";
-    lastSavedContent = "";
-    updatedAtEl.textContent = result.updatedText;
-    updateStatsAndDirty();
-    setStatus("已清空", "ready");
-    showToast("内容已清空", "success");
-  } catch (error) {
-    setStatus(error.message, "error");
-    showToast("清空失败: " + error.message, "error", 4000);
-  } finally {
-    setBusy(false);
-  }
+  textarea.value = "";
+  updateStatsAndDirty();
+  textarea.focus();
+  showToast("输入框已清空，按保存或 Ctrl+S 写入云端", "info");
 });
 
 document.addEventListener("click", (e) => {
