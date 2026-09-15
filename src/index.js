@@ -126,7 +126,7 @@ async function handleTabsAction(request, env) {
 
   if (action === "create") {
     const title = String(payload?.title || `便签 ${tabs.length + 1}`).trim().slice(0, 30) || `便签 ${tabs.length + 1}`;
-    const newId = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const newId = String(payload?.id || "").trim() || `tab_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     tabs.push({ id: newId, title });
     await saveTabsMeta(env, tabs);
     return json({ ok: true, tab: { id: newId, title }, tabs });
@@ -562,19 +562,23 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
   color: var(--subtle);
-  font-size: 14px;
-  line-height: 1;
-  transition: all 0.12s ease;
-  margin-left: 2px;
+  transition: all 0.15s ease;
+  margin-left: 3px;
+  padding: 0;
+  cursor: pointer;
 }
 
 .tab-close:hover {
   background: var(--danger-light);
   color: var(--danger);
+}
+
+.tab-close svg {
+  pointer-events: none;
 }
 
 .add-tab-btn {
@@ -938,9 +942,124 @@ textarea::placeholder {
 .toast.error { border-left: 3px solid var(--danger); }
 .toast.info { border-left: 3px solid #0ea5e9; }
 
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(12px) scale(0.96); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+/* Custom Confirm Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 16px;
+}
+
+.modal-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-card {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.45);
+  width: 100%;
+  max-width: 380px;
+  padding: 22px 24px;
+  transform: scale(0.92) translateY(8px);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-backdrop.is-open .modal-card {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-icon-badge.danger {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+.modal-title-wrap {
+  flex: 1;
+}
+
+.modal-title {
+  margin: 0 0 6px 0;
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.modal-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.modal-target-highlight {
+  color: var(--ink);
+  font-weight: 600;
+  padding: 1px 5px;
+  background: var(--line);
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions .btn {
+  padding: 0 16px;
+  font-size: 13px;
+  height: 35px;
+  border-radius: 8px;
+}
+
+.btn-modal-danger {
+  border-color: transparent;
+  background: var(--danger);
+  color: #ffffff;
+  box-shadow: 0 2px 8px -1px rgba(225, 29, 72, 0.4);
+}
+.btn-modal-danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  box-shadow: 0 4px 12px -1px rgba(225, 29, 72, 0.55);
+}
+.btn-modal-danger:active:not(:disabled) {
+  transform: scale(0.97);
 }
 
 @media (max-width: 680px) {
@@ -1038,6 +1157,30 @@ textarea::placeholder {
       </div>
     </section>
   </main>
+  <div id="confirmModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-icon-badge danger">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"></path>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </div>
+        <div class="modal-title-wrap">
+          <h3 class="modal-title" id="confirmModalTitle">删除便签</h3>
+          <div class="modal-desc" id="confirmModalDesc">确认删除便签吗？</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="confirmCancelBtn" class="btn btn-secondary" type="button">取消</button>
+        <button id="confirmOkBtn" class="btn btn-modal-danger" type="button">
+          <span id="confirmOkLabel">确认删除</span>
+        </button>
+      </div>
+    </div>
+  </div>
   <div id="toastContainer" class="toast-container"></div>
 
 <script>
@@ -1063,6 +1206,12 @@ const themeToggle = document.getElementById("themeToggle");
 const toastContainer = document.getElementById("toastContainer");
 const tabsScroll = document.getElementById("tabsScroll");
 const addTabBtn = document.getElementById("addTabBtn");
+const confirmModal = document.getElementById("confirmModal");
+const confirmModalTitle = document.getElementById("confirmModalTitle");
+const confirmModalDesc = document.getElementById("confirmModalDesc");
+const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+const confirmOkBtn = document.getElementById("confirmOkBtn");
+const confirmOkLabel = document.getElementById("confirmOkLabel");
 
 let lastSavedContent = textarea.value;
 let isDirty = false;
@@ -1108,6 +1257,61 @@ function showToast(message, type = "info", duration = 2800) {
   }, duration);
 }
 
+// Custom confirm dialog
+function showConfirmDialog({ title, desc, highlightText, okText = "确认删除" }) {
+  return new Promise((resolve) => {
+    confirmModalTitle.textContent = title;
+    confirmModalDesc.innerHTML = desc + (highlightText ? ' <span class="modal-target-highlight">「' + escapeHtml(highlightText) + '」</span>' : '') + '？<br><span style="color:var(--subtle);font-size:12px;margin-top:6px;display:inline-block;">删除后内容将无法恢复。</span>';
+    confirmOkLabel.textContent = okText;
+
+    confirmModal.style.display = "flex";
+    void confirmModal.offsetWidth;
+    confirmModal.classList.add("is-open");
+
+    function cleanup() {
+      confirmModal.classList.remove("is-open");
+      setTimeout(() => {
+        confirmModal.style.display = "none";
+      }, 200);
+      confirmOkBtn.removeEventListener("click", onOk);
+      confirmCancelBtn.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onKeyDown);
+      confirmModal.removeEventListener("click", onBackdropClick);
+    }
+
+    function onOk() {
+      cleanup();
+      resolve(true);
+    }
+
+    function onCancel() {
+      cleanup();
+      resolve(false);
+    }
+
+    function onKeyDown(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        onOk();
+      }
+    }
+
+    function onBackdropClick(e) {
+      if (e.target === confirmModal) {
+        onCancel();
+      }
+    }
+
+    confirmOkBtn.addEventListener("click", onOk);
+    confirmCancelBtn.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onKeyDown);
+    confirmModal.addEventListener("click", onBackdropClick);
+  });
+}
+
 // Status handling
 function setStatus(text, type = "ready") {
   statusText.textContent = text;
@@ -1145,7 +1349,7 @@ function renderTabs() {
     if (tab.id !== "main" || tabs.length > 1) {
       const closeBtn = document.createElement("span");
       closeBtn.className = "tab-close";
-      closeBtn.innerHTML = "&times;";
+      closeBtn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
       closeBtn.title = "删除便签";
       closeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1263,60 +1467,96 @@ function startRenameTab(tabId, titleSpan) {
 }
 
 // Add tab
+// Add tab (Optimistic instant response)
 addTabBtn.addEventListener("click", async () => {
-  addTabBtn.disabled = true;
+  const newTabId = "tab_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+  const defaultName = "便签 " + (tabs.length + 1);
+  const newTab = { id: newTabId, title: defaultName };
+
+  if (tabsCache[currentTabId]) {
+    tabsCache[currentTabId].content = textarea.value;
+    tabsCache[currentTabId].isDirty = (textarea.value !== tabsCache[currentTabId].lastSavedContent);
+  }
+
+  tabs.push(newTab);
+  tabsCache[newTabId] = {
+    content: "",
+    lastSavedContent: "",
+    updatedText: "尚未保存",
+    isDirty: false,
+  };
+
+  currentTabId = newTabId;
+  textarea.value = "";
+  lastSavedContent = "";
+  updatedAtEl.textContent = "尚未保存";
+
+  updateStatsAndDirty();
+  renderTabs();
+  tabsScroll.scrollLeft = tabsScroll.scrollWidth;
+  textarea.focus();
+  showToast("已新建「" + newTab.title + "」", "success");
+
   try {
-    const defaultName = "便签 " + (tabs.length + 1);
-    const result = await postJson("/api/tabs", { action: "create", title: defaultName });
-    tabs = result.tabs;
-    const newTab = result.tab;
-
-    if (tabsCache[currentTabId]) {
-      tabsCache[currentTabId].content = textarea.value;
-      tabsCache[currentTabId].isDirty = (textarea.value !== tabsCache[currentTabId].lastSavedContent);
+    const result = await postJson("/api/tabs", { action: "create", id: newTabId, title: defaultName });
+    if (result.tabs) {
+      tabs = result.tabs;
+      renderTabs();
     }
-
-    tabsCache[newTab.id] = {
-      content: "",
-      lastSavedContent: "",
-      updatedText: "尚未保存",
-      isDirty: false,
-    };
-
-    currentTabId = newTab.id;
-    textarea.value = "";
-    lastSavedContent = "";
-    updatedAtEl.textContent = "尚未保存";
-
-    updateStatsAndDirty();
-    renderTabs();
-    textarea.focus();
-    showToast("已创建「" + newTab.title + "」", "success");
   } catch (err) {
-    showToast("新建便签失败: " + err.message, "error");
-  } finally {
-    addTabBtn.disabled = false;
+    tabs = tabs.filter(t => t.id !== newTabId);
+    delete tabsCache[newTabId];
+    if (currentTabId === newTabId) {
+      currentTabId = tabs[0]?.id || "main";
+      if (tabsCache[currentTabId]) {
+        textarea.value = tabsCache[currentTabId].content;
+        lastSavedContent = tabsCache[currentTabId].lastSavedContent;
+        updatedAtEl.textContent = tabsCache[currentTabId].updatedText;
+      }
+      updateStatsAndDirty();
+    }
+    renderTabs();
+    showToast("新建便签同步失败: " + err.message, "error");
   }
 });
 
-// Delete tab
+// Delete tab (Custom confirmation modal + Optimistic instant delete)
 async function deleteTab(tabId, title) {
-  if (!confirm("确认删除便签「" + title + "」？删除后内容将无法恢复。")) return;
+  const confirmed = await showConfirmDialog({
+    title: "删除便签",
+    desc: "确认删除便签",
+    highlightText: title,
+    okText: "确认删除",
+  });
+  if (!confirmed) return;
+
+  const prevTabs = [...tabs];
+  const deletedCache = tabsCache[tabId];
+
+  delete tabsCache[tabId];
+  tabs = tabs.filter(t => t.id !== tabId);
+
+  if (currentTabId === tabId) {
+    const nextTab = tabs[0];
+    if (nextTab) {
+      await switchTab(nextTab.id);
+    }
+  } else {
+    renderTabs();
+  }
+  showToast("已删除便签「" + title + "」", "info");
 
   try {
     const result = await postJson("/api/tabs", { action: "delete", id: tabId });
-    delete tabsCache[tabId];
-    tabs = result.tabs;
-
-    if (currentTabId === tabId) {
-      const nextTab = tabs[0];
-      await switchTab(nextTab.id);
-    } else {
+    if (result.tabs) {
+      tabs = result.tabs;
       renderTabs();
     }
-    showToast("已删除便签", "info");
   } catch (err) {
-    showToast("删除便签失败: " + err.message, "error");
+    tabs = prevTabs;
+    if (deletedCache) tabsCache[tabId] = deletedCache;
+    renderTabs();
+    showToast("删除便签同步失败: " + err.message, "error");
   }
 }
 
