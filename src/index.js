@@ -1257,11 +1257,37 @@ function showToast(message, type = "info", duration = 2800) {
   }, duration);
 }
 
+// Client HTML escape helper
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 // Custom confirm dialog
 function showConfirmDialog({ title, desc, highlightText, okText = "确认删除" }) {
   return new Promise((resolve) => {
     confirmModalTitle.textContent = title;
-    confirmModalDesc.innerHTML = desc + (highlightText ? ' <span class="modal-target-highlight">「' + escapeHtml(highlightText) + '」</span>' : '') + '？<br><span style="color:var(--subtle);font-size:12px;margin-top:6px;display:inline-block;">删除后内容将无法恢复。</span>';
+    confirmModalDesc.innerHTML = "";
+    
+    const descText = document.createTextNode(desc + (highlightText ? " " : "？"));
+    confirmModalDesc.appendChild(descText);
+    
+    if (highlightText) {
+      const tag = document.createElement("span");
+      tag.className = "modal-target-highlight";
+      tag.textContent = "「" + highlightText + "」";
+      confirmModalDesc.appendChild(tag);
+      confirmModalDesc.appendChild(document.createTextNode("？"));
+    }
+    
+    const note = document.createElement("div");
+    note.style.cssText = "color:var(--subtle);font-size:12px;margin-top:6px;";
+    note.textContent = "删除后内容将无法恢复。";
+    confirmModalDesc.appendChild(note);
+
     confirmOkLabel.textContent = okText;
 
     confirmModal.style.display = "flex";
