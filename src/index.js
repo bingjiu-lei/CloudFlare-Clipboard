@@ -606,6 +606,61 @@ body {
   flex: 1;
   position: relative;
   display: flex;
+  min-height: calc(100vh - 240px);
+}
+
+.skeleton-loader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  z-index: 5;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.skeleton-shimmer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--line) 25%, var(--line-strong) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+  opacity: 0.6;
+}
+
+[data-theme="dark"] .skeleton-line {
+  background: linear-gradient(90deg, #182235 25%, #2a3952 50%, #182235 75%);
+  background-size: 200% 100%;
+  opacity: 0.85;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--subtle);
+  font-size: 13px;
+  font-weight: 500;
+  padding-bottom: 8px;
 }
 
 textarea {
@@ -623,6 +678,7 @@ textarea {
   tab-size: 2;
   scrollbar-width: thin;
   scrollbar-color: var(--scroll-thumb) transparent;
+  transition: opacity 0.18s ease;
 }
 
 textarea::-webkit-scrollbar {
@@ -787,17 +843,47 @@ textarea::placeholder {
   75% { transform: translateX(2px); }
 }
 
-.btn-primary {
+.btn-save {
+  border-color: var(--line);
+  background: var(--line);
+  color: var(--muted);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="dark"] .btn-save {
+  border-color: #243349;
+  background: #1a2538;
+  color: var(--subtle);
+}
+.btn-save:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: #e2e8f0;
+  color: var(--ink);
+}
+[data-theme="dark"] .btn-save:hover:not(:disabled) {
+  border-color: #334360;
+  background: #25334a;
+  color: var(--ink);
+}
+
+/* 有未保存改动时亮起 */
+.btn-save.is-dirty {
   background: var(--accent);
   color: #ffffff;
   border-color: transparent;
+  box-shadow: 0 2px 8px -1px rgba(5, 150, 105, 0.4);
+  animation: save-glow 2.5s infinite ease-in-out;
 }
-.btn-primary:hover:not(:disabled) {
+.btn-save.is-dirty:hover:not(:disabled) {
   background: var(--accent-hover);
-  box-shadow: 0 3px 8px -1px rgba(5, 150, 105, 0.35);
+  box-shadow: 0 4px 14px -1px rgba(5, 150, 105, 0.55);
 }
-.btn-primary:active:not(:disabled) {
+.btn-save.is-dirty:active:not(:disabled) {
   background: var(--accent-active);
+}
+
+@keyframes save-glow {
+  0%, 100% { box-shadow: 0 2px 8px -1px rgba(5, 150, 105, 0.35); }
+  50% { box-shadow: 0 3px 14px 1px rgba(5, 150, 105, 0.6); }
 }
 
 .spinner {
@@ -908,7 +994,21 @@ textarea::placeholder {
           <span>新建</span>
         </button>
       </div>
-      <div class="textarea-wrapper">
+      <div class="textarea-wrapper" id="textareaWrapper">
+        <div id="skeletonLoader" class="skeleton-loader" style="display: none;">
+          <div class="skeleton-shimmer">
+            <div class="skeleton-line" style="width: 72%;"></div>
+            <div class="skeleton-line" style="width: 88%;"></div>
+            <div class="skeleton-line" style="width: 55%;"></div>
+            <div class="skeleton-line" style="width: 82%;"></div>
+            <div class="skeleton-line" style="width: 65%;"></div>
+            <div class="skeleton-line" style="width: 40%;"></div>
+          </div>
+          <div class="skeleton-tip">
+            <svg class="spinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+            <span>正在加载便签内容...</span>
+          </div>
+        </div>
         <textarea id="clipboard" spellcheck="false" placeholder="在此输入或粘贴文本...">${escapeHtml(content)}</textarea>
       </div>
       <div class="toolbar">
@@ -929,7 +1029,7 @@ textarea::placeholder {
             <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             <span class="btn-label">清空</span>
           </button>
-          <button id="saveButton" class="btn btn-primary" type="button" title="保存剪贴板 (Ctrl+S)">
+          <button id="saveButton" class="btn btn-save" type="button" title="保存剪贴板 (Ctrl+S)">
             <svg class="btn-icon" id="saveIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             <svg class="btn-icon spinner" id="saveSpinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
             <span class="btn-label">保存</span>
@@ -947,6 +1047,7 @@ let tabs = ${JSON.stringify(tabs)};
 let currentTabId = ${JSON.stringify(activeTabId)};
 
 const textarea = document.getElementById("clipboard");
+const skeletonLoader = document.getElementById("skeletonLoader");
 const statusIndicator = document.getElementById("statusIndicator");
 const statusText = document.getElementById("statusText");
 const textStats = document.getElementById("textStats");
@@ -1086,14 +1187,14 @@ async function switchTab(targetId) {
   }
 
   setStatus("加载中...", "saving");
+  if (skeletonLoader) skeletonLoader.style.display = "flex";
+  textarea.style.opacity = "0.15";
+  const switchingTo = targetId;
+
   try {
     const res = await fetch("/api/tab?id=" + encodeURIComponent(targetId));
     const data = await res.json();
     if (!data.ok) throw new Error(data.message || "加载失败");
-
-    textarea.value = data.content || "";
-    lastSavedContent = data.content || "";
-    updatedAtEl.textContent = data.updatedText || "尚未保存";
 
     tabsCache[targetId] = {
       content: data.content || "",
@@ -1102,10 +1203,22 @@ async function switchTab(targetId) {
       isDirty: false,
     };
 
-    updateStatsAndDirty();
-    renderTabs();
+    if (currentTabId === switchingTo) {
+      textarea.value = data.content || "";
+      lastSavedContent = data.content || "";
+      updatedAtEl.textContent = data.updatedText || "尚未保存";
+      updateStatsAndDirty();
+      renderTabs();
+    }
   } catch (err) {
-    showToast("切换失败: " + err.message, "error");
+    if (currentTabId === switchingTo) {
+      showToast("切换失败: " + err.message, "error");
+    }
+  } finally {
+    if (currentTabId === switchingTo) {
+      if (skeletonLoader) skeletonLoader.style.display = "none";
+      textarea.style.opacity = "1";
+    }
   }
 }
 
@@ -1217,6 +1330,7 @@ function updateStatsAndDirty() {
 
   const prevDirty = tabsCache[currentTabId] ? tabsCache[currentTabId].isDirty : false;
   isDirty = (val !== lastSavedContent);
+  saveButton.classList.toggle("is-dirty", isDirty);
 
   if (tabsCache[currentTabId]) {
     tabsCache[currentTabId].content = val;
@@ -1282,6 +1396,10 @@ async function postJson(url, body) {
 // Save action
 async function handleSaveAction() {
   if (saveButton.disabled) return;
+  if (!isDirty) {
+    showToast("当前便签内容已是最新", "info");
+    return;
+  }
   setBusy(true);
   setStatus("正在保存...", "saving");
   try {
@@ -1393,6 +1511,27 @@ function updateCountdown() {
   setTimeout(updateCountdown, 1000);
 }
 updateCountdown();
+
+// Prefetch background tabs for instantaneous switching
+async function prefetchTabs() {
+  for (const tab of tabs) {
+    if (!tabsCache[tab.id]) {
+      try {
+        const res = await fetch("/api/tab?id=" + encodeURIComponent(tab.id));
+        const data = await res.json();
+        if (data.ok && !tabsCache[tab.id]) {
+          tabsCache[tab.id] = {
+            content: data.content || "",
+            lastSavedContent: data.content || "",
+            updatedText: data.updatedText || "尚未保存",
+            isDirty: false,
+          };
+        }
+      } catch (_) {}
+    }
+  }
+}
+setTimeout(prefetchTabs, 400);
 </script>
 </body>
 </html>`;
