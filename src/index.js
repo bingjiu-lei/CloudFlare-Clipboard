@@ -1188,6 +1188,7 @@ const actionToken = ${JSON.stringify(actionToken)};
 const actionTokenSeconds = ${actionTokenSeconds};
 let tabs = ${JSON.stringify(tabs)};
 let currentTabId = ${JSON.stringify(activeTabId)};
+let previousTabId = null;
 
 const textarea = document.getElementById("clipboard");
 const skeletonLoader = document.getElementById("skeletonLoader");
@@ -1404,6 +1405,7 @@ async function switchTab(targetId) {
     tabsCache[currentTabId].isDirty = (textarea.value !== tabsCache[currentTabId].lastSavedContent);
   }
 
+  previousTabId = currentTabId;
   currentTabId = targetId;
 
   if (tabsCache[targetId]) {
@@ -1512,6 +1514,7 @@ addTabBtn.addEventListener("click", async () => {
     isDirty: false,
   };
 
+  previousTabId = currentTabId;
   currentTabId = newTabId;
   textarea.value = "";
   lastSavedContent = "";
@@ -1558,16 +1561,26 @@ async function deleteTab(tabId, title) {
 
   const prevTabs = [...tabs];
   const deletedCache = tabsCache[tabId];
+  const closingIndex = tabs.findIndex(t => t.id === tabId);
 
   delete tabsCache[tabId];
-  tabs = tabs.filter(t => t.id !== tabId);
+  const remainingTabs = tabs.filter(t => t.id !== tabId);
+  tabs = remainingTabs;
 
   if (currentTabId === tabId) {
-    const nextTab = tabs[0];
+    // 智能选择下一个激活的便签：
+    // 1. 优先切换回之前查看的便签（例如从“待解决清单”切到此便签后删除，自动返回“待解决清单”）
+    // 2. 若之前查看的便签不存在，则按主流标签页规则就近激活相邻便签
+    let nextTab = remainingTabs.find(t => t.id === previousTabId);
+    if (!nextTab && remainingTabs.length > 0) {
+      const nextIndex = Math.min(closingIndex, remainingTabs.length - 1);
+      nextTab = remainingTabs[Math.max(0, nextIndex)];
+    }
     if (nextTab) {
       await switchTab(nextTab.id);
     }
   } else {
+    if (previousTabId === tabId) previousTabId = null;
     renderTabs();
   }
   showToast("已删除便签「" + title + "」", "info");
