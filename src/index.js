@@ -4,6 +4,7 @@ const CLIPBOARD_ID = "main";
 const TABS_META_ID = "_tabs_meta";
 const DEFAULT_TABS = [{ id: "main", title: "默认便签" }];
 const DEFAULT_ACTION_TOKEN_SECONDS = 30 * 60;
+const READ_TOKEN_SECONDS = 60 * 60 * 24;
 const MAX_CONTENT_LENGTH = 1024 * 1024;
 
 export default {
@@ -45,6 +46,10 @@ async function handleHome(request, env) {
     purpose: "clipboard:write",
     role: access.result?.role || "public",
   });
+  const readToken = await createActionToken(env, {
+    purpose: "clipboard:read",
+    role: access.result?.role || "public",
+  }, READ_TOKEN_SECONDS);
 
   return html(renderPage({
     tabs,
@@ -52,14 +57,18 @@ async function handleHome(request, env) {
     content: item.content,
     updatedAt: item.updated_at,
     actionToken,
+    readToken,
     authRole: access.result?.role || "public",
     actionTokenSeconds: getActionTokenSeconds(env),
   }));
 }
 
 async function handleGetTab(request, env) {
-  const access = await checkAccess(request, env, { resourcePath: "/" });
-  if (!access.ok) return access.response;
+  const token = new URL(request.url).searchParams.get("token") || request.headers.get("x-clipboard-read-token") || "";
+  const payload = await verifyActionToken(env, token);
+  if (payload?.purpose !== "clipboard:read") {
+    return json({ ok: false, message: "标签读取授权已过期，请刷新页面重新验证。" }, 401);
+  }
 
   const url = new URL(request.url);
   const id = url.searchParams.get("id") || CLIPBOARD_ID;
@@ -217,8 +226,7 @@ async function deleteClipboard(env, id) {
   ).bind(id).run();
 }
 
-async function createActionToken(env, payload) {
-  const maxAge = getActionTokenSeconds(env);
+async function createActionToken(env, payload, maxAge = getActionTokenSeconds(env)) {
   const body = {
     ...payload,
     iat: unix(),
@@ -260,7 +268,7 @@ function getActionTokenSeconds(env) {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_ACTION_TOKEN_SECONDS;
 }
 
-function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, authRole, actionTokenSeconds }) {
+function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, readToken, authRole, actionTokenSeconds }) {
   const updatedText = updatedAt ? formatTime(updatedAt) : "尚未保存";
   return `<!doctype html>
 <html lang="zh-CN">
@@ -1185,6 +1193,7 @@ textarea::placeholder {
 
 <script>
 const actionToken = ${JSON.stringify(actionToken)};
+const readToken = ${JSON.stringify(readToken)};
 const actionTokenSeconds = ${actionTokenSeconds};
 let tabs = ${JSON.stringify(tabs)};
 let currentTabId = ${JSON.stringify(activeTabId)};
@@ -1399,6 +1408,7 @@ renderTabs();
 // Switch tab smoothly
 async function switchTab(targetId) {
   if (targetId === currentTabId) return;
+  const previousTabId = currentTabId;
 
   if (tabsCache[currentTabId]) {
     tabsCache[currentTabId].content = textarea.value;
@@ -1424,9 +1434,11 @@ async function switchTab(targetId) {
   const switchingTo = targetId;
 
   try {
-    const res = await fetch("/api/tab?id=" + encodeURIComponent(targetId));
+    const res = await fetch("/api/tab?id=" + encodeURIComponent(targetId), {
+      headers: { "x-clipboard-read-token": readToken },
+    });
     const data = await res.json();
-    if (!data.ok) throw new Error(data.message || "加载失败");
+    if (!res.ok || !data.ok) throw new Error(data.message || "加载失败 (" + res.status + ")");
 
     tabsCache[targetId] = {
       content: data.content || "",
@@ -1444,6 +1456,9 @@ async function switchTab(targetId) {
     }
   } catch (err) {
     if (currentTabId === switchingTo) {
+      currentTabId = previousTabId;
+      renderTabs();
+      updateStatsAndDirty();
       showToast("切换失败: " + err.message, "error");
     }
   } finally {
@@ -1796,9 +1811,11 @@ async function prefetchTabs() {
   for (const tab of tabs) {
     if (!tabsCache[tab.id]) {
       try {
-        const res = await fetch("/api/tab?id=" + encodeURIComponent(tab.id));
+        const res = await fetch("/api/tab?id=" + encodeURIComponent(tab.id), {
+          headers: { "x-clipboard-read-token": readToken },
+        });
         const data = await res.json();
-        if (data.ok && !tabsCache[tab.id]) {
+        if (res.ok && data.ok && !tabsCache[tab.id]) {
           tabsCache[tab.id] = {
             content: data.content || "",
             lastSavedContent: data.content || "",
