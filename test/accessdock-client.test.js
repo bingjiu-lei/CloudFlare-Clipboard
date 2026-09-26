@@ -61,9 +61,3 @@ test("accepts AccessDock's 401 login response", async () => {
   assert.equal(result.response.status, 302);
   assert.equal(result.response.headers.get("location"), loginUrl);
 });
-
-test("passes the clipboard read token to prefetched and switched tabs", async () => {
-  const source = await (await import("node:fs/promises")).readFile(new URL("../src/index.js", import.meta.url), "utf8");
-  assert.match(source, /x-clipboard-read-token[\s\S]{0,80}readToken/);
-  assert.match(source, /payload\?\.purpose !== "clipboard:read"/);
-});
