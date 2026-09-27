@@ -58,8 +58,8 @@ async function handleHome(request, env) {
 }
 
 async function handleGetTab(request, env) {
-  const access = await checkAccess(request, env, { resourcePath: "/" });
-  if (!access.ok) return access.response;
+  const auth = await authorizeRead(request, env);
+  if (!auth.ok) return json({ ok: false, message: auth.message }, auth.status);
 
   const url = new URL(request.url);
   const id = url.searchParams.get("id") || CLIPBOARD_ID;
@@ -154,6 +154,21 @@ async function handleTabsAction(request, env) {
   }
 
   return json({ ok: false, message: "Unknown action" }, 400);
+}
+
+async function authorizeRead(request, env) {
+  const access = await checkAccess(request, env, { resourcePath: "/" });
+  if (access.ok) {
+    return { ok: true, source: access.result?.role || "access" };
+  }
+
+  const token = request.headers.get("x-clipboard-action-token") || "";
+  const payload = await verifyActionToken(env, token);
+  if (payload?.purpose === "clipboard:write" || payload?.purpose === "clipboard:read") {
+    return { ok: true, source: "action-token" };
+  }
+
+  return { ok: false, status: 401, message: "访问授权已过期，请刷新页面重新验证。" };
 }
 
 async function authorizeWrite(request, env) {
@@ -1424,9 +1439,7 @@ async function switchTab(targetId) {
   const switchingTo = targetId;
 
   try {
-    const res = await fetch("/api/tab?id=" + encodeURIComponent(targetId));
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.message || "加载失败");
+    const data = await getJson("/api/tab?id=" + encodeURIComponent(targetId));
 
     tabsCache[targetId] = {
       content: data.content || "",
@@ -1658,6 +1671,18 @@ function setBusy(isBusy) {
   saveSpinner.style.display = isBusy ? "" : "none";
 }
 
+async function getJson(url) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "x-clipboard-action-token": actionToken,
+    },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.ok) throw new Error(result.message || "请求失败");
+  return result;
+}
+
 async function postJson(url, body) {
   const response = await fetch(url, {
     method: "POST",
@@ -1796,8 +1821,7 @@ async function prefetchTabs() {
   for (const tab of tabs) {
     if (!tabsCache[tab.id]) {
       try {
-        const res = await fetch("/api/tab?id=" + encodeURIComponent(tab.id));
-        const data = await res.json();
+        const data = await getJson("/api/tab?id=" + encodeURIComponent(tab.id));
         if (data.ok && !tabsCache[tab.id]) {
           tabsCache[tab.id] = {
             content: data.content || "",
