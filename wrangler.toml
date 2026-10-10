@@ -6,7 +6,7 @@ compatibility_date = "2026-06-16"
 enabled = true
 
 [vars]
-ACCESSDOCK_BASE_URL = "https://auth.leiyun.blog"
+ACCESSDOCK_BASE_URL = "https://auth.leiyun.space"
 
 [[d1_databases]]
 binding = "CLIPBOARD_DB"

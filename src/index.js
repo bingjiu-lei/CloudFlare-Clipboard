@@ -278,72 +278,72 @@ function getActionTokenSeconds(env) {
 function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, authRole, actionTokenSeconds }) {
   const updatedText = updatedAt ? formatTime(updatedAt) : "尚未保存";
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clipboard</title>
 <style>
 :root {
-  --bg: #f8fafc;
-  --bg-pattern: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px);
-  --panel: #ffffff;
-  --panel-hover: #f1f5f9;
-  --ink: #0f172a;
-  --ink-secondary: #334155;
-  --muted: #64748b;
-  --subtle: #94a3b8;
-  --line: #e2e8f0;
-  --line-strong: #cbd5e1;
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-active: #065f46;
-  --accent-light: #ecfdf5;
-  --accent-border: #a7f3d0;
-  --danger: #e11d48;
-  --danger-hover: #be123c;
-  --danger-light: #fff1f2;
-  --danger-border: #fecdd3;
-  --warning: #d97706;
-  --warning-light: #fffbeb;
-  --warning-border: #fde68a;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 0 0 1px var(--line);
-  --kbd-bg: rgba(255, 255, 255, 0.22);
+  --bg: #09090b;
+  --bg-pattern: none;
+  --panel: #141417;
+  --panel-hover: #18181b;
+  --ink: #ffffff;
+  --ink-secondary: #f4f4f5;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
+  --line: #27272a;
+  --line-strong: #3f3f46;
+  --accent: #ffffff;
+  --accent-hover: #e4e4e7;
+  --accent-active: #d4d4d8;
+  --accent-light: rgba(255, 255, 255, 0.08);
+  --accent-border: rgba(255, 255, 255, 0.2);
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(239, 68, 68, 0.25);
+  --warning: #e4e4e7;
+  --warning-light: rgba(255, 255, 255, 0.05);
+  --warning-border: #3f3f46;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--line);
+  --kbd-bg: rgba(255, 255, 255, 0.12);
   --kbd-text: #ffffff;
-  --kbd-border: rgba(255, 255, 255, 0.35);
-  --scroll-thumb: #cbd5e1;
+  --kbd-border: rgba(255, 255, 255, 0.2);
+  --scroll-thumb: #27272a;
 }
 
 [data-theme="dark"] {
-  --bg: #090d16;
-  --bg-pattern: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  --panel: #131b2e;
-  --panel-hover: #1e293b;
-  --ink: #f8fafc;
-  --ink-secondary: #cbd5e1;
-  --muted: #94a3b8;
-  --subtle: #64748b;
-  --line: #222f46;
-  --line-strong: #334360;
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --accent-active: #047857;
-  --accent-light: rgba(16, 185, 129, 0.12);
-  --accent-border: rgba(16, 185, 129, 0.3);
-  --danger: #f43f5e;
-  --danger-hover: #e11d48;
-  --danger-light: rgba(244, 63, 94, 0.12);
-  --danger-border: rgba(244, 63, 94, 0.3);
-  --warning: #f59e0b;
-  --warning-light: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(245, 158, 11, 0.3);
+  --bg: #09090b;
+  --bg-pattern: none;
+  --panel: #141417;
+  --panel-hover: #18181b;
+  --ink: #ffffff;
+  --ink-secondary: #f4f4f5;
+  --muted: #a1a1aa;
+  --subtle: #71717a;
+  --line: #27272a;
+  --line-strong: #3f3f46;
+  --accent: #ffffff;
+  --accent-hover: #e4e4e7;
+  --accent-active: #d4d4d8;
+  --accent-light: rgba(255, 255, 255, 0.08);
+  --accent-border: rgba(255, 255, 255, 0.2);
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --danger-light: rgba(239, 68, 68, 0.08);
+  --danger-border: rgba(239, 68, 68, 0.25);
+  --warning: #e4e4e7;
+  --warning-light: rgba(255, 255, 255, 0.05);
+  --warning-border: #3f3f46;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--line);
-  --kbd-bg: rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--line);
+  --kbd-bg: rgba(255, 255, 255, 0.12);
   --kbd-text: #ffffff;
   --kbd-border: rgba(255, 255, 255, 0.2);
-  --scroll-thumb: #334360;
+  --scroll-thumb: #27272a;
 }
 
 * { box-sizing: border-box; }
@@ -390,13 +390,13 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: var(--panel);
+  background: #18181b;
   border: 1px solid var(--line);
-  color: var(--accent);
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .brand-title {
@@ -545,10 +545,10 @@ body {
 }
 
 .tab-dirty-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--warning);
+  background: #ffffff;
   display: inline-block;
   flex-shrink: 0;
 }
@@ -757,14 +757,14 @@ textarea::placeholder {
 }
 
 .status-indicator.ready .status-dot {
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
 
 .status-indicator.dirty .status-dot {
-  background: var(--warning);
-  box-shadow: 0 0 0 3px var(--warning-light);
-  animation: pulse-dot 2s infinite ease-in-out;
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  animation: pulse-dot 1.5s infinite ease-in-out;
 }
 
 .status-indicator.saving .status-dot {
@@ -830,13 +830,13 @@ textarea::placeholder {
 
 .btn-secondary {
   border-color: var(--line);
-  background: var(--panel);
-  color: var(--ink-secondary);
+  background: #18181b;
+  color: #d4d4d8;
 }
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--line-strong);
-  background: var(--panel-hover);
-  color: var(--ink);
+  background: #27272a;
+  color: #ffffff;
 }
 
 .btn-danger {
@@ -886,22 +886,24 @@ textarea::placeholder {
 
 /* 有未保存改动时亮起 */
 .btn-save.is-dirty {
-  background: var(--accent);
-  color: #ffffff;
-  border-color: transparent;
-  box-shadow: 0 2px 8px -1px rgba(5, 150, 105, 0.4);
+  background: #ffffff;
+  color: #09090b;
+  border-color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
   animation: save-glow 2.5s infinite ease-in-out;
 }
 .btn-save.is-dirty:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: 0 4px 14px -1px rgba(5, 150, 105, 0.55);
+  background: #e4e4e7;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
 }
 .btn-save.is-dirty:active:not(:disabled) {
   background: var(--accent-active);
 }
 
 @keyframes save-glow {
-  0%, 100% { box-shadow: 0 2px 8px -1px rgba(5, 150, 105, 0.35); }
+  0%, 100% { box-shadow: 0 0 12px rgba(255, 255, 255, 0.2); }
+  50% { box-shadow: 0 0 22px rgba(255, 255, 255, 0.35); }
+}
   50% { box-shadow: 0 3px 14px 1px rgba(5, 150, 105, 0.6); }
 }
 
@@ -948,12 +950,12 @@ textarea::placeholder {
 }
 
 [data-theme="dark"] .toast {
-  background: #1e293b;
+  background: #141417;
   color: #f8fafc;
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--line);
 }
 
-.toast.success { border-left: 3px solid var(--accent); }
+.toast.success { border-left: 3px solid #ffffff; }
 .toast.error { border-left: 3px solid var(--danger); }
 .toast.info { border-left: 3px solid #0ea5e9; }
 
