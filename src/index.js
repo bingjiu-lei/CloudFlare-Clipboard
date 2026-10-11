@@ -376,7 +376,13 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 4px 2px;
+  padding: 6px 2px;
+}
+
+.topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
 .brand {
@@ -400,54 +406,70 @@ body {
 }
 
 .brand-title {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--ink);
 }
 
-.meta {
+.brand-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.topbar-meta-right {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
 }
 
-.pill {
-  height: 30px;
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pill-token {
+  height: 32px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--panel);
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 
-.pill svg {
+.pill-token svg {
   color: var(--subtle);
   flex-shrink: 0;
 }
 
-.pill.expired {
+.pill-token.expired {
   border-color: var(--danger-border);
   background: var(--danger-light);
   color: var(--danger);
 }
-.pill.expired svg {
+.pill-token.expired svg {
   color: var(--danger);
 }
 
 .theme-btn {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--line);
-  border-radius: 50%;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--muted);
   display: inline-flex;
@@ -720,22 +742,27 @@ textarea::placeholder {
   opacity: 0.8;
 }
 
-.toolbar {
+.toolbar-minimal {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
   border-top: 1px solid var(--line);
   background: var(--panel);
-  padding: 10px 16px;
-  flex-wrap: wrap;
+  padding: 8px 16px;
   user-select: none;
+}
+
+.meta-updated {
+  font-size: 12px;
+  color: var(--subtle);
+  font-variant-numeric: tabular-nums;
 }
 
 .status-group {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-size: 12.5px;
   color: var(--muted);
 }
@@ -869,9 +896,9 @@ textarea::placeholder {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 [data-theme="dark"] .btn-save {
-  border-color: #243349;
-  background: #1a2538;
-  color: var(--subtle);
+  border-color: var(--line);
+  background: #18181b;
+  color: #a1a1aa;
 }
 .btn-save:hover:not(:disabled) {
   border-color: var(--line-strong);
@@ -879,32 +906,30 @@ textarea::placeholder {
   color: var(--ink);
 }
 [data-theme="dark"] .btn-save:hover:not(:disabled) {
-  border-color: #334360;
-  background: #25334a;
-  color: var(--ink);
+  border-color: var(--line-strong);
+  background: #27272a;
+  color: #ffffff;
 }
 
 /* 有未保存改动时亮起 */
 .btn-save.is-dirty {
-  background: #ffffff;
-  color: #09090b;
-  border-color: #ffffff;
+  background: #ffffff !important;
+  color: #09090b !important;
+  border-color: #ffffff !important;
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
   animation: save-glow 2.5s infinite ease-in-out;
 }
 .btn-save.is-dirty:hover:not(:disabled) {
-  background: #e4e4e7;
+  background: #e4e4e7 !important;
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
 }
 .btn-save.is-dirty:active:not(:disabled) {
-  background: var(--accent-active);
+  background: #d4d4d8 !important;
 }
 
 @keyframes save-glow {
   0%, 100% { box-shadow: 0 0 12px rgba(255, 255, 255, 0.2); }
   50% { box-shadow: 0 0 22px rgba(255, 255, 255, 0.35); }
-}
-  50% { box-shadow: 0 3px 14px 1px rgba(5, 150, 105, 0.6); }
 }
 
 .spinner {
@@ -1080,45 +1105,83 @@ textarea::placeholder {
 }
 
 @media (max-width: 680px) {
-  .shell { width: calc(100% - 20px); padding: 14px 0 20px 0; }
-  .topbar { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .meta { justify-content: flex-start; width: 100%; }
+  .shell { width: calc(100% - 20px); padding: 10px 0 20px 0; }
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 8px 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .topbar-main {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .topbar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.35fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .topbar-actions .btn {
+    height: 36px;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 13px;
+  }
   .tab-bar { padding: 6px 8px 0 8px; }
   .tab-title { max-width: 90px; }
-  .toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
-  .status-group { justify-content: space-between; }
-  .actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-  .btn { justify-content: center; padding: 0 8px; }
-  textarea { min-height: calc(100vh - 270px); padding: 16px; }
+  .toolbar-minimal {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 12px;
+  }
+  textarea { min-height: calc(100vh - 250px); padding: 14px; }
 }
 </style>
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
-      <div class="brand">
-        <span class="brand-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          </svg>
-        </span>
-        <span class="brand-title">Clipboard</span>
+      <div class="topbar-main">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+          </span>
+          <span class="brand-title">Clipboard</span>
+          <span class="brand-badge">${escapeHtml(authRole)}</span>
+        </div>
+        <div class="topbar-meta-right">
+          <div class="pill-token" id="tokenPill" title="有效操作剩余时间">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 10"></polyline></svg>
+            <span id="tokenTimer">${Math.round(actionTokenSeconds / 60)}:00</span>
+          </div>
+          <button id="themeToggle" class="theme-btn" type="button" title="切换深色/浅色模式" aria-label="Toggle theme"></button>
+        </div>
       </div>
-      <div class="meta">
-        <div class="pill">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          <span>验证：${escapeHtml(authRole)}</span>
-        </div>
-        <div class="pill">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          <span>更新：<span id="updatedAt">${escapeHtml(updatedText)}</span></span>
-        </div>
-        <div class="pill" id="tokenPill" title="有效操作剩余时间">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 10"></polyline></svg>
-          <span>令牌：<span id="tokenTimer">${Math.round(actionTokenSeconds / 60)}:00</span></span>
-        </div>
-        <button id="themeToggle" class="theme-btn" type="button" title="切换深色/浅色模式" aria-label="Toggle theme"></button>
+      <div class="topbar-actions">
+        <button id="copyButton" class="btn btn-secondary" type="button" title="复制当前便签全部内容">
+          <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span class="btn-label">复制</span>
+        </button>
+        <button id="clearButton" class="btn btn-danger" type="button" title="清空内容">
+          <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span class="btn-label">清空</span>
+        </button>
+        <button id="saveButton" class="btn btn-save" type="button" title="保存剪贴板 (Ctrl+S)">
+          <svg class="btn-icon" id="saveIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          <svg class="btn-icon spinner" id="saveSpinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+          <span class="btn-label">保存</span>
+        </button>
       </div>
     </header>
 
@@ -1147,7 +1210,7 @@ textarea::placeholder {
         </div>
         <textarea id="clipboard" spellcheck="false" placeholder="在此输入或粘贴文本...">${escapeHtml(content)}</textarea>
       </div>
-      <div class="toolbar">
+      <div class="toolbar-minimal">
         <div class="status-group">
           <div id="statusIndicator" class="status-indicator ready">
             <span class="status-dot"></span>
@@ -1156,20 +1219,8 @@ textarea::placeholder {
           <div class="stats-divider"></div>
           <div id="textStats" class="text-stats">0 字符 · 0 词 · 1 行</div>
         </div>
-        <div class="actions">
-          <button id="copyButton" class="btn btn-secondary" type="button" title="复制当前便签全部内容">
-            <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span class="btn-label">复制</span>
-          </button>
-          <button id="clearButton" class="btn btn-danger" type="button" title="清空内容">
-            <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            <span class="btn-label">清空</span>
-          </button>
-          <button id="saveButton" class="btn btn-save" type="button" title="保存剪贴板 (Ctrl+S)">
-            <svg class="btn-icon" id="saveIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-            <svg class="btn-icon spinner" id="saveSpinner" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
-            <span class="btn-label">保存</span>
-          </button>
+        <div class="meta-updated">
+          <span>更新于 <span id="updatedAt">${escapeHtml(updatedText)}</span></span>
         </div>
       </div>
     </section>
