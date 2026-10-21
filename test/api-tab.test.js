@@ -90,3 +90,25 @@ test("GET /api/tab succeeds with x-clipboard-action-token even when AccessDock c
   assert.equal(data.id, "tab_1");
   assert.equal(data.content, "便签1内容");
 });
+
+test("home page renders light & dark theme CSS variables and refresh button", async () => {
+  const homeEnv = createEnv({
+    ACCESSDOCK: {
+      async fetch() {
+        return Response.json({ allowed: true, protected: true, role: "admin" });
+      },
+    },
+  });
+  const res = await worker.fetch(new Request("https://ps.example.com/"), homeEnv);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+
+  // 验证深浅色双主题变量支持
+  assert.match(html, /\[data-theme="light"\]/, "should define light theme");
+  assert.match(html, /\[data-theme="dark"\]/, "should define dark theme");
+
+  // 验证刷新按钮与刷新/自动同步逻辑存在
+  assert.match(html, /id="refreshButton"/, "should render refresh button");
+  assert.match(html, /refreshCurrentTab/, "should include refreshCurrentTab function");
+  assert.match(html, /checkRemoteUpdate/, "should include checkRemoteUpdate auto-sync function");
+});

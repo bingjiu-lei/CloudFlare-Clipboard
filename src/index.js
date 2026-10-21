@@ -278,41 +278,49 @@ function getActionTokenSeconds(env) {
 function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, authRole, actionTokenSeconds }) {
   const updatedText = updatedAt ? formatTime(updatedAt) : "尚未保存";
   return `<!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clipboard</title>
+<script>
+(function() {
+  try {
+    var t = localStorage.getItem("cf_clipboard_theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", t);
+  } catch(e) {}
+})();
+</script>
 <style>
-:root {
-  --bg: #09090b;
-  --bg-pattern: none;
-  --panel: #141417;
-  --panel-hover: #18181b;
-  --ink: #ffffff;
-  --ink-secondary: #f4f4f5;
-  --muted: #a1a1aa;
-  --subtle: #71717a;
-  --line: #27272a;
-  --line-strong: #3f3f46;
-  --accent: #ffffff;
-  --accent-hover: #e4e4e7;
-  --accent-active: #d4d4d8;
-  --accent-light: rgba(255, 255, 255, 0.08);
-  --accent-border: rgba(255, 255, 255, 0.2);
+:root, [data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-pattern: radial-gradient(rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+  --panel: #ffffff;
+  --panel-hover: #f1f5f9;
+  --ink: #0f172a;
+  --ink-secondary: #334155;
+  --muted: #64748b;
+  --subtle: #94a3b8;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --accent: #0f172a;
+  --accent-hover: #1e293b;
+  --accent-active: #334155;
+  --accent-light: rgba(15, 23, 42, 0.06);
+  --accent-border: rgba(15, 23, 42, 0.15);
   --danger: #ef4444;
   --danger-hover: #dc2626;
   --danger-light: rgba(239, 68, 68, 0.08);
   --danger-border: rgba(239, 68, 68, 0.25);
-  --warning: #e4e4e7;
-  --warning-light: rgba(255, 255, 255, 0.05);
-  --warning-border: #3f3f46;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--line);
-  --kbd-bg: rgba(255, 255, 255, 0.12);
-  --kbd-text: #ffffff;
-  --kbd-border: rgba(255, 255, 255, 0.2);
-  --scroll-thumb: #27272a;
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.08);
+  --warning-border: rgba(245, 158, 11, 0.25);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--line);
+  --kbd-bg: rgba(0, 0, 0, 0.06);
+  --kbd-text: #0f172a;
+  --kbd-border: rgba(0, 0, 0, 0.12);
+  --scroll-thumb: #cbd5e1;
 }
 
 [data-theme="dark"] {
@@ -335,9 +343,9 @@ function renderPage({ tabs, activeTabId, content, updatedAt, actionToken, authRo
   --danger-hover: #dc2626;
   --danger-light: rgba(239, 68, 68, 0.08);
   --danger-border: rgba(239, 68, 68, 0.25);
-  --warning: #e4e4e7;
-  --warning-light: rgba(255, 255, 255, 0.05);
-  --warning-border: #3f3f46;
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.08);
+  --warning-border: rgba(245, 158, 11, 0.25);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
   --shadow-card: 0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--line);
   --kbd-bg: rgba(255, 255, 255, 0.12);
@@ -396,13 +404,13 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: #18181b;
+  background: var(--panel);
   border: 1px solid var(--line);
-  color: #ffffff;
+  color: var(--ink);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none;
+  box-shadow: var(--shadow-sm);
 }
 
 .brand-title {
@@ -417,7 +425,7 @@ body {
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-light);
   border: 1px solid var(--line);
   color: var(--muted);
   letter-spacing: 0.04em;
@@ -570,7 +578,7 @@ body {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--warning);
   display: inline-block;
   flex-shrink: 0;
 }
@@ -784,14 +792,22 @@ textarea::placeholder {
 }
 
 .status-indicator.ready .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+[data-theme="dark"] .status-indicator.ready .status-dot {
   background: #ffffff;
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
 }
 
 .status-indicator.dirty .status-dot {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning-light);
+  animation: pulse-dot 1.5s infinite ease-in-out;
+}
+[data-theme="dark"] .status-indicator.dirty .status-dot {
   background: #ffffff;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-  animation: pulse-dot 1.5s infinite ease-in-out;
 }
 
 .status-indicator.saving .status-dot {
@@ -857,10 +873,20 @@ textarea::placeholder {
 
 .btn-secondary {
   border-color: var(--line);
+  background: var(--panel);
+  color: var(--ink-secondary);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--panel-hover);
+  color: var(--ink);
+}
+[data-theme="dark"] .btn-secondary {
+  border-color: var(--line);
   background: #18181b;
   color: #d4d4d8;
 }
-.btn-secondary:hover:not(:disabled) {
+[data-theme="dark"] .btn-secondary:hover:not(:disabled) {
   border-color: var(--line-strong);
   background: #27272a;
   color: #ffffff;
@@ -891,19 +917,19 @@ textarea::placeholder {
 
 .btn-save {
   border-color: var(--line);
-  background: var(--line);
+  background: var(--panel);
   color: var(--muted);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-save:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  background: var(--panel-hover);
+  color: var(--ink);
 }
 [data-theme="dark"] .btn-save {
   border-color: var(--line);
   background: #18181b;
   color: #a1a1aa;
-}
-.btn-save:hover:not(:disabled) {
-  border-color: var(--line-strong);
-  background: #e2e8f0;
-  color: var(--ink);
 }
 [data-theme="dark"] .btn-save:hover:not(:disabled) {
   border-color: var(--line-strong);
@@ -913,21 +939,40 @@ textarea::placeholder {
 
 /* 有未保存改动时亮起 */
 .btn-save.is-dirty {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+  box-shadow: 0 0 16px rgba(15, 23, 42, 0.25);
+  animation: save-glow 2.5s infinite ease-in-out;
+}
+.btn-save.is-dirty:hover:not(:disabled) {
+  background: #1e293b !important;
+  box-shadow: 0 0 22px rgba(15, 23, 42, 0.35);
+}
+.btn-save.is-dirty:active:not(:disabled) {
+  background: #334155 !important;
+}
+
+[data-theme="dark"] .btn-save.is-dirty {
   background: #ffffff !important;
   color: #09090b !important;
   border-color: #ffffff !important;
   box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
-  animation: save-glow 2.5s infinite ease-in-out;
 }
-.btn-save.is-dirty:hover:not(:disabled) {
+[data-theme="dark"] .btn-save.is-dirty:hover:not(:disabled) {
   background: #e4e4e7 !important;
   box-shadow: 0 0 22px rgba(255, 255, 255, 0.35);
 }
-.btn-save.is-dirty:active:not(:disabled) {
+[data-theme="dark"] .btn-save.is-dirty:active:not(:disabled) {
   background: #d4d4d8 !important;
 }
 
 @keyframes save-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 0, 0, 0.15); }
+  50% { box-shadow: 0 0 22px rgba(0, 0, 0, 0.25); }
+}
+
+[data-theme="dark"] @keyframes save-glow {
   0%, 100% { box-shadow: 0 0 12px rgba(255, 255, 255, 0.2); }
   50% { box-shadow: 0 0 22px rgba(255, 255, 255, 0.35); }
 }
@@ -966,10 +1011,10 @@ textarea::placeholder {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  background: #0f172a;
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
   animation: toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -980,7 +1025,8 @@ textarea::placeholder {
   border-color: var(--line);
 }
 
-.toast.success { border-left: 3px solid #ffffff; }
+.toast.success { border-left: 3px solid #0f172a; }
+[data-theme="dark"] .toast.success { border-left: 3px solid #ffffff; }
 .toast.error { border-left: 3px solid var(--danger); }
 .toast.info { border-left: 3px solid #0ea5e9; }
 
@@ -1124,15 +1170,16 @@ textarea::placeholder {
   }
   .topbar-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 1.35fr;
-    gap: 6px;
+    grid-template-columns: 1fr 1fr 1fr 1.25fr;
+    gap: 5px;
     width: 100%;
   }
   .topbar-actions .btn {
     height: 36px;
     justify-content: center;
-    padding: 0 8px;
-    font-size: 13px;
+    padding: 0 4px;
+    font-size: 12.5px;
+    gap: 4px;
   }
   .tab-bar { padding: 6px 8px 0 8px; }
   .tab-title { max-width: 90px; }
@@ -1143,6 +1190,10 @@ textarea::placeholder {
     padding: 8px 12px;
   }
   textarea { min-height: calc(100vh - 250px); padding: 14px; }
+}
+
+.spin-anim {
+  animation: spin 0.8s linear infinite;
 }
 </style>
 </head>
@@ -1169,6 +1220,10 @@ textarea::placeholder {
         </div>
       </div>
       <div class="topbar-actions">
+        <button id="refreshButton" class="btn btn-secondary" type="button" title="刷新当前便签数据">
+          <svg class="btn-icon" id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          <span class="btn-label">刷新</span>
+        </button>
         <button id="copyButton" class="btn btn-secondary" type="button" title="复制当前便签全部内容">
           <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           <span class="btn-label">复制</span>
@@ -1220,7 +1275,7 @@ textarea::placeholder {
           <div id="textStats" class="text-stats">0 字符 · 0 词 · 1 行</div>
         </div>
         <div class="meta-updated">
-          <span>更新于 <span id="updatedAt">${escapeHtml(updatedText)}</span></span>
+          <span id="metaUpdatedWrap" style="cursor: pointer;" title="点击立即刷新当前便签">更新于 <span id="updatedAt">${escapeHtml(updatedText)}</span></span>
         </div>
       </div>
     </section>
@@ -1264,8 +1319,11 @@ const statusIndicator = document.getElementById("statusIndicator");
 const statusText = document.getElementById("statusText");
 const textStats = document.getElementById("textStats");
 const updatedAtEl = document.getElementById("updatedAt");
+const metaUpdatedWrap = document.getElementById("metaUpdatedWrap");
 const tokenTimerEl = document.getElementById("tokenTimer");
 const tokenPill = document.getElementById("tokenPill");
+const refreshButton = document.getElementById("refreshButton");
+const refreshIcon = document.getElementById("refreshIcon");
 const saveButton = document.getElementById("saveButton");
 const saveIcon = document.getElementById("saveIcon");
 const saveSpinner = document.getElementById("saveSpinner");
@@ -1292,6 +1350,7 @@ tabsCache[currentTabId] = {
   content: textarea.value,
   lastSavedContent: textarea.value,
   updatedText: updatedAtEl.textContent,
+  updatedAt: ${Number(updatedAt || 0)},
   isDirty: false,
 };
 
@@ -1483,6 +1542,7 @@ async function switchTab(targetId) {
     updatedAtEl.textContent = cached.updatedText;
     updateStatsAndDirty();
     renderTabs();
+    checkRemoteUpdate();
     return;
   }
 
@@ -1498,6 +1558,7 @@ async function switchTab(targetId) {
       content: data.content || "",
       lastSavedContent: data.content || "",
       updatedText: data.updatedText || "尚未保存",
+      updatedAt: Number(data.updatedAt || 0),
       isDirty: false,
     };
 
@@ -1768,6 +1829,7 @@ async function handleSaveAction() {
       tabsCache[currentTabId].content = textarea.value;
       tabsCache[currentTabId].lastSavedContent = textarea.value;
       tabsCache[currentTabId].updatedText = result.updatedText;
+      tabsCache[currentTabId].updatedAt = Number(result.updatedAt || 0);
       tabsCache[currentTabId].isDirty = false;
     }
 
@@ -1880,6 +1942,7 @@ async function prefetchTabs() {
             content: data.content || "",
             lastSavedContent: data.content || "",
             updatedText: data.updatedText || "尚未保存",
+            updatedAt: Number(data.updatedAt || 0),
             isDirty: false,
           };
         }
@@ -1888,6 +1951,139 @@ async function prefetchTabs() {
   }
 }
 setTimeout(prefetchTabs, 400);
+
+// Refresh current tab content (Manual or Auto)
+let isRefreshing = false;
+async function refreshCurrentTab(isManual = true) {
+  if (isRefreshing) return;
+
+  // 如果手动刷新且当前便签有未保存修改，提示确认
+  if (isManual && isDirty) {
+    const currentTitle = tabs.find(t => t.id === currentTabId)?.title || "当前便签";
+    const confirmed = await showConfirmDialog({
+      title: "刷新便签",
+      desc: "当前便签有未保存的修改，刷新将丢失本地草稿并拉取云端最新内容，确认刷新",
+      highlightText: currentTitle,
+      okText: "放弃修改并刷新",
+    });
+    if (!confirmed) return;
+  }
+
+  isRefreshing = true;
+  if (refreshIcon) refreshIcon.classList.add("spin-anim");
+  if (refreshButton) refreshButton.disabled = true;
+
+  try {
+    const data = await getJson("/api/tab?id=" + encodeURIComponent(currentTabId));
+    const newContent = data.content || "";
+    const newUpdatedText = data.updatedText || "尚未保存";
+    const newUpdatedAt = Number(data.updatedAt || 0);
+
+    const contentChanged = (textarea.value !== newContent);
+    textarea.value = newContent;
+    lastSavedContent = newContent;
+    updatedAtEl.textContent = newUpdatedText;
+
+    if (tabsCache[currentTabId]) {
+      tabsCache[currentTabId].content = newContent;
+      tabsCache[currentTabId].lastSavedContent = newContent;
+      tabsCache[currentTabId].updatedText = newUpdatedText;
+      tabsCache[currentTabId].updatedAt = newUpdatedAt;
+      tabsCache[currentTabId].isDirty = false;
+    }
+
+    updateStatsAndDirty();
+    renderTabs();
+
+    if (isManual) {
+      if (contentChanged) {
+        showToast("已同步云端最新内容", "success");
+      } else {
+        showToast("当前便签内容已是最新", "info");
+      }
+    } else {
+      if (contentChanged) {
+        showToast("已自动同步来自其他设备的更新", "success");
+      }
+    }
+  } catch (err) {
+    if (isManual) {
+      showToast("刷新失败: " + err.message, "error");
+    }
+  } finally {
+    isRefreshing = false;
+    if (refreshIcon) refreshIcon.classList.remove("spin-anim");
+    if (refreshButton) refreshButton.disabled = false;
+  }
+}
+
+if (refreshButton) {
+  refreshButton.addEventListener("click", () => refreshCurrentTab(true));
+}
+if (metaUpdatedWrap) {
+  metaUpdatedWrap.addEventListener("click", () => refreshCurrentTab(true));
+}
+
+// 跨设备体验优化：切回标签页或窗口获得焦点时，若无本地草稿未保存，智能检查云端是否有更新
+let lastSyncCheckTime = 0;
+async function checkRemoteUpdate() {
+  const now = Date.now();
+  if (now - lastSyncCheckTime < 3000) return; // 3 秒节流保护
+  lastSyncCheckTime = now;
+
+  if (isDirty) return; // 本地正在编辑草稿时不自动静默覆盖
+
+  try {
+    const data = await getJson("/api/tab?id=" + encodeURIComponent(currentTabId));
+    const cached = tabsCache[currentTabId];
+    const serverUpdatedAt = Number(data.updatedAt || 0);
+    const localUpdatedAt = cached ? (cached.updatedAt || 0) : 0;
+
+    if ((serverUpdatedAt > localUpdatedAt || data.content !== textarea.value) && !isDirty) {
+      const prevContent = textarea.value;
+      textarea.value = data.content || "";
+      lastSavedContent = data.content || "";
+      updatedAtEl.textContent = data.updatedText || "尚未保存";
+
+      if (tabsCache[currentTabId]) {
+        tabsCache[currentTabId].content = data.content || "";
+        tabsCache[currentTabId].lastSavedContent = data.content || "";
+        tabsCache[currentTabId].updatedText = data.updatedText || "尚未保存";
+        tabsCache[currentTabId].updatedAt = serverUpdatedAt;
+        tabsCache[currentTabId].isDirty = false;
+      }
+
+      updateStatsAndDirty();
+      renderTabs();
+
+      if (prevContent !== data.content) {
+        showToast("已自动同步来自其他设备的更新", "success");
+      }
+    }
+  } catch (_) {}
+}
+
+window.addEventListener("focus", checkRemoteUpdate);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    checkRemoteUpdate();
+  }
+});
+
+// 闲置自动检测：每隔 30 秒若页面处于激活状态且无未保存草稿，静默轮询一次
+setInterval(() => {
+  if (document.visibilityState === "visible" && !isDirty) {
+    checkRemoteUpdate();
+  }
+}, 30000);
+
+// 支持快捷键 Alt+R 或 Ctrl+Shift+R 局部刷新便签
+window.addEventListener("keydown", (e) => {
+  if ((e.altKey && e.key.toLowerCase() === "r") || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "r")) {
+    e.preventDefault();
+    refreshCurrentTab(true);
+  }
+});
 </script>
 </body>
 </html>`;
