@@ -406,11 +406,20 @@ body {
   border-radius: 9px;
   background: var(--panel);
   border: 1px solid var(--line);
-  color: var(--ink);
+  color: var(--muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.brand-icon:hover {
+  color: var(--ink);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
 .brand-title {
@@ -1170,16 +1179,15 @@ textarea::placeholder {
   }
   .topbar-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1.25fr;
-    gap: 5px;
+    grid-template-columns: 1fr 1fr 1.35fr;
+    gap: 6px;
     width: 100%;
   }
   .topbar-actions .btn {
     height: 36px;
     justify-content: center;
-    padding: 0 4px;
-    font-size: 12.5px;
-    gap: 4px;
+    padding: 0 8px;
+    font-size: 13px;
   }
   .tab-bar { padding: 6px 8px 0 8px; }
   .tab-title { max-width: 90px; }
@@ -1202,12 +1210,7 @@ textarea::placeholder {
     <header class="topbar">
       <div class="topbar-main">
         <div class="brand">
-          <span class="brand-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            </svg>
-          </span>
+          <button id="themeToggle" class="brand-icon" type="button" title="切换深色/浅色模式" aria-label="Toggle theme"></button>
           <span class="brand-title">Clipboard</span>
           <span class="brand-badge">${escapeHtml(authRole)}</span>
         </div>
@@ -1216,14 +1219,12 @@ textarea::placeholder {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 10"></polyline></svg>
             <span id="tokenTimer">${Math.round(actionTokenSeconds / 60)}:00</span>
           </div>
-          <button id="themeToggle" class="theme-btn" type="button" title="切换深色/浅色模式" aria-label="Toggle theme"></button>
+          <button id="refreshButton" class="theme-btn" type="button" title="刷新当前便签数据" aria-label="刷新当前便签">
+            <svg class="btn-icon" id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </button>
         </div>
       </div>
       <div class="topbar-actions">
-        <button id="refreshButton" class="btn btn-secondary" type="button" title="刷新当前便签数据">
-          <svg class="btn-icon" id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-          <span class="btn-label">刷新</span>
-        </button>
         <button id="copyButton" class="btn btn-secondary" type="button" title="复制当前便签全部内容">
           <svg class="btn-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
           <span class="btn-label">复制</span>
@@ -1363,8 +1364,8 @@ function setTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem(THEME_KEY, theme);
   themeToggle.innerHTML = theme === "dark"
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
-    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+    ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>'
+    : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
 }
 setTheme(getTheme());
 themeToggle.addEventListener("click", () => {
